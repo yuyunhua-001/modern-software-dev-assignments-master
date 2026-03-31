@@ -1,74 +1,296 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Action Item Extractor</title>
+    <title>需求分析助手</title>
     <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; margin: 2rem auto; max-width: 800px; padding: 0 1rem; }
-      h1 { font-size: 1.5rem; }
-      textarea { width: 100%; min-height: 160px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace; }
-      button { padding: 0.5rem 1rem; }
-      .items { margin-top: 1rem; }
-      .item { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; }
-      .muted { color: #6b7280; font-size: 0.875rem; }
-      .row { display: flex; gap: 0.5rem; align-items: center; }
+      *, *::before, *::after { box-sizing: border-box; }
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, "Microsoft YaHei", sans-serif;
+        margin: 0; padding: 1.5rem;
+        background: #f5f6fa; color: #222;
+      }
+      h1 { font-size: 1.4rem; margin: 0 0 0.25rem; }
+      .subtitle { color: #6b7280; font-size: 0.875rem; margin: 0 0 1rem; }
+      textarea {
+        width: 100%; padding: 0.6rem;
+        font-family: inherit;
+        border: 1px solid #d1d5db; border-radius: 6px;
+        resize: vertical; background: #fff;
+      }
+      .input-row {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+      }
+      @media (max-width: 720px) {
+        .input-row { flex-direction: column; flex-wrap: wrap; }
+      }
+      .doc-block,
+      .hint-block {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+      }
+      .doc-block {
+        flex: 1 1 0;
+        padding: 0.5rem 0.65rem;
+      }
+      .hint-block {
+        flex: 0 0 clamp(300px, 36%, 450px);
+        padding: 0.5rem 0.65rem;
+        background: #fafafa;
+        border: 1px solid #e8e8ed;
+        border-radius: 8px;
+      }
+      @media (max-width: 720px) {
+        .hint-block { flex: 1 1 auto; width: 100%; max-width: none; }
+      }
+      .block-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+        line-height: 1.25;
+        margin: 0 0 0.35rem 0;
+        flex-shrink: 0;
+      }
+      .hint-block .block-label {
+        color: #4b5563;
+      }
+      /* 两侧输入区同高，顶、底对齐 */
+      #text,
+      #hint {
+        flex: 1 1 auto;
+        width: 100%;
+        height: 380px;
+        min-height: 200px;
+        margin: 0;
+      }
+      #text {
+        font-size: 0.9rem;
+      }
+      #hint {
+        font-size: 0.8rem;
+        line-height: 1.45;
+      }
+      .hint-block .hint-desc {
+        font-size: 0.72rem;
+        color: #6b7280;
+        font-weight: 400;
+        line-height: 1.35;
+        margin: 0.4rem 0 0 0;
+        flex-shrink: 0;
+      }
+      .toolbar { display: flex; gap: 0.75rem; align-items: center; margin: 0 0 1.2rem; }
+      button {
+        padding: 0.45rem 1.1rem; border: none; border-radius: 5px;
+        cursor: pointer; font-size: 0.9rem; font-weight: 500;
+      }
+      #btn-analyze { background: #2563eb; color: #fff; }
+      #btn-analyze:disabled { background: #93c5fd; cursor: not-allowed; }
+
+      .results {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+        align-items: start;
+      }
+      @media (max-width: 960px) {
+        .results { grid-template-columns: 1fr; }
+      }
+
+      .card {
+        background: #fff; border-radius: 8px;
+        border: 1px solid #e5e7eb; padding: 1rem;
+      }
+      .card h2 { font-size: 1rem; margin: 0 0 0.75rem; display: flex; align-items: center; gap: 0.4rem; }
+      .card h2 .badge {
+        font-size: 0.7rem; padding: 0.1rem 0.45rem;
+        border-radius: 99px; font-weight: 600;
+      }
+      .req-badge { background: #dbeafe; color: #1d4ed8; }
+      .fac-badge { background: #dcfce7; color: #15803d; }
+      .chal-badge { background: #fef3c7; color: #b45309; }
+
+      /* 需求点 */
+      .req-item { margin-bottom: 0.65rem; }
+      .req-category {
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em;
+        text-transform: uppercase; color: #6b7280; margin-bottom: 0.15rem;
+      }
+      .req-summary { font-size: 0.88rem; line-height: 1.5; }
+
+      /* 测试因子 */
+      .factor-item {
+        display: flex; align-items: flex-start; gap: 0.5rem;
+        padding: 0.3rem 0; border-bottom: 1px solid #f3f4f6;
+        font-size: 0.88rem;
+      }
+      .factor-item:last-child { border-bottom: none; }
+      .factor-item input[type="checkbox"] { margin-top: 0.15rem; flex-shrink: 0; }
+      .factor-item span.done { text-decoration: line-through; color: #9ca3af; }
+
+      /* 关键难点 */
+      .challenge-item {
+        display: flex; gap: 0.65rem; align-items: flex-start;
+        padding: 0.55rem 0; border-bottom: 1px solid #f3f4f6;
+        font-size: 0.88rem; line-height: 1.55;
+      }
+      .challenge-item:last-child { border-bottom: none; }
+      .challenge-num {
+        flex-shrink: 0; width: 1.5rem; height: 1.5rem;
+        border-radius: 6px; background: #fff7ed; color: #c2410c;
+        font-size: 0.75rem; font-weight: 700; display: flex;
+        align-items: center; justify-content: center;
+      }
+
+      .empty { color: #9ca3af; font-size: 0.875rem; }
+      .status { font-size: 0.85rem; color: #6b7280; margin-bottom: 0.5rem; }
     </style>
   </head>
   <body>
-    <h1>Action Item Extractor</h1>
-    <p class="muted">Paste notes and extract actionable items. Minimal raw HTML frontend.</p>
+    <h1>需求分析助手</h1>
+    <p class="subtitle">粘贴需求文档，自动理解需求结构、提取测试因子与关键难点，辅助用例设计。</p>
 
-    <label for="text">Notes</label>
-    <textarea id="text" placeholder="Paste notes here...&#10;e.g.&#10;- [ ] Set up database&#10;- Implement extract endpoint"></textarea>
-    <div class="row">
-      <label class="row"><input id="save_note" type="checkbox" checked /> Save as note</label>
-      <button id="extract">Extract</button>
+    <div class="input-row">
+      <div class="doc-block">
+        <label for="text" class="block-label">需求内容</label>
+        <textarea id="text" placeholder="粘贴需求文档内容...
+例如：
+用户上传头像，文件格式支持 jpg/png，大小不超过 2MB。
+未登录用户访问个人中心时，自动跳转至登录页。
+每个用户每天最多发送 10 条消息，超出后提示限额。"></textarea>
+      </div>
+      <aside class="hint-block">
+        <label for="hint" class="block-label">提示</label>
+        <textarea id="hint" placeholder="例如：电商下单场景；「用户」指已实名 C 端买家；需兼容 iOS/Android。"></textarea>
+        <p class="hint-desc">可选。补充背景、术语或需关注的点，便于模型理解。</p>
+      </aside>
     </div>
 
-    <div class="items" id="items"></div>
+    <div class="toolbar">
+      <button id="btn-analyze">分析需求</button>
+    </div>
+
+    <div class="results">
+      <div class="card" id="card-req">
+        <h2>📋 需求重述 <span class="badge req-badge" id="req-count"></span></h2>
+        <div id="req-content"><p class="empty">点击「分析需求」后，此处显示结构化需求重述。</p></div>
+      </div>
+      <div class="card" id="card-chal">
+        <h2>⚠️ 关键难点 <span class="badge chal-badge" id="chal-count"></span></h2>
+        <div id="chal-content"><p class="empty">点击「分析需求」后，此处显示从需求中提炼的关键难点（通常为 2 条）。</p></div>
+      </div>
+      <div class="card" id="card-fac">
+        <h2>🔍 提取测试因子 <span class="badge fac-badge" id="fac-count"></span></h2>
+        <div id="fac-content"><p class="empty">点击「分析需求」后，此处显示测试因子列表，可勾选已设计用例。</p></div>
+      </div>
+    </div>
 
     <script>
-      const $ = (sel) => document.querySelector(sel);
-      const itemsEl = $('#items');
-      const btn = $('#extract');
+      const $ = id => document.getElementById(id);
+      const btn = $('btn-analyze');
+
       btn.addEventListener('click', async () => {
-        const text = $('#text').value;
-        const save = $('#save_note').checked;
-        itemsEl.textContent = 'Extracting...';
+        const text = $('text').value.trim();
+        if (!text) { alert('请输入需求文档内容'); return; }
+        const hint = $('hint').value.trim();
+
+        btn.disabled = true;
+        btn.textContent = '分析中...';
+        $('req-content').innerHTML = '<p class="status">需求重述中…</p>';
+        $('fac-content').innerHTML = '<p class="status">提取测试因子中…</p>';
+        $('chal-content').innerHTML = '<p class="status">提炼关键难点中…</p>';
+        $('req-count').textContent = '';
+        $('fac-count').textContent = '';
+        $('chal-count').textContent = '';
+
         try {
-          const res = await fetch('/action-items/extract', {
+          const res = await fetch('/test-factors/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, save_note: save }),
+            body: JSON.stringify({ text, hint: hint || undefined }),
           });
-          if (!res.ok) throw new Error('Request failed');
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
-          if (!data.items || data.items.length === 0) {
-            itemsEl.innerHTML = '<p class="muted">No action items found.</p>';
-            return;
-          }
-          itemsEl.innerHTML = data.items.map(it => (
-            `<div class="item"><input type="checkbox" data-id="${it.id}" /> <span>${it.text}</span></div>`
-          )).join('');
-          itemsEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-            cb.addEventListener('change', async (e) => {
-              const id = e.target.getAttribute('data-id');
-              await fetch(`/action-items/${id}/done`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ done: e.target.checked }),
-              });
-            });
-          });
+
+          renderRequirements(data.requirements || []);
+          renderFactors(data.factors || []);
+          renderKeyChallenges(data.key_challenges || []);
         } catch (err) {
           console.error(err);
-          itemsEl.textContent = 'Error extracting items';
+          $('req-content').innerHTML = '<p class="empty">需求重述失败，请重试。</p>';
+          $('fac-content').innerHTML = '<p class="empty">测试因子提取失败，请重试。</p>';
+          $('chal-content').innerHTML = '<p class="empty">关键难点提取失败，请重试。</p>';
+        } finally {
+          btn.disabled = false;
+          btn.textContent = '分析需求';
         }
       });
 
+      function renderRequirements(points) {
+        $('req-count').textContent = points.length;
+        if (!points.length) {
+          $('req-content').innerHTML = '<p class="empty">未解析到需求点，请检查文档内容。</p>';
+          return;
+        }
+        $('req-content').innerHTML = points.map(p => `
+          <div class="req-item">
+            <div class="req-category">${escHtml(p.category)}</div>
+            <div class="req-summary">${escHtml(p.summary)}</div>
+          </div>`).join('');
+      }
+
+      function renderKeyChallenges(items) {
+        $('chal-count').textContent = items.length;
+        if (!items.length) {
+          $('chal-content').innerHTML = '<p class="empty">未提炼到关键难点，请检查文档内容或稍后重试。</p>';
+          return;
+        }
+        $('chal-content').innerHTML = items.map((text, i) => `
+          <div class="challenge-item">
+            <span class="challenge-num">${i + 1}</span>
+            <span>${escHtml(text)}</span>
+          </div>`).join('');
+      }
+
+      function renderFactors(factors) {
+        $('fac-count').textContent = factors.length;
+        if (!factors.length) {
+          $('fac-content').innerHTML = '<p class="empty">未提取到测试因子，请检查文档内容。</p>';
+          return;
+        }
+        const html = factors.map(it => `
+          <div class="factor-item">
+            <input type="checkbox" data-id="${it.id}" />
+            <span>${escHtml(it.factor)}</span>
+          </div>`).join('');
+        $('fac-content').innerHTML = html;
+
+        $('fac-content').querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          cb.addEventListener('change', async e => {
+            const id = e.target.getAttribute('data-id');
+            const span = e.target.nextElementSibling;
+            span.classList.toggle('done', e.target.checked);
+            await fetch(`/test-factors/${id}/covered`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ covered: e.target.checked }),
+            });
+          });
+        });
+      }
+
+      function escHtml(s) {
+        return String(s)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
     </script>
   </body>
-  </html>
-
-
+</html>

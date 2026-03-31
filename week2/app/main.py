@@ -8,12 +8,12 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from .db import init_db
-from .routers import action_items, notes
+from .routers import notes, test_factors
 from . import db
 
 init_db()
 
-app = FastAPI(title="Action Item Extractor")
+app = FastAPI(title="Test Factor Extractor")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -23,7 +23,7 @@ def index() -> str:
 
 
 app.include_router(notes.router)
-app.include_router(action_items.router)
+app.include_router(test_factors.router)
 
 
 static_dir = Path(__file__).resolve().parents[1] / "frontend"

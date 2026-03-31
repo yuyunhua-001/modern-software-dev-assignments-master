@@ -36,13 +36,13 @@ def init_db() -> None:
         )
         cursor.execute(
             """
-            CREATE TABLE IF NOT EXISTS action_items (
+            CREATE TABLE IF NOT EXISTS test_factors (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                note_id INTEGER,
-                text TEXT NOT NULL,
-                done INTEGER DEFAULT 0,
+                doc_id INTEGER,
+                factor TEXT NOT NULL,
+                covered INTEGER DEFAULT 0,
                 created_at TEXT DEFAULT (datetime('now')),
-                FOREIGN KEY (note_id) REFERENCES notes(id)
+                FOREIGN KEY (doc_id) REFERENCES notes(id)
             );
             """
         )
@@ -75,41 +75,41 @@ def get_note(note_id: int) -> Optional[sqlite3.Row]:
         return row
 
 
-def insert_action_items(items: list[str], note_id: Optional[int] = None) -> list[int]:
+def insert_test_factors(factors: list[str], doc_id: Optional[int] = None) -> list[int]:
     with get_connection() as connection:
         cursor = connection.cursor()
         ids: list[int] = []
-        for item in items:
+        for factor in factors:
             cursor.execute(
-                "INSERT INTO action_items (note_id, text) VALUES (?, ?)",
-                (note_id, item),
+                "INSERT INTO test_factors (doc_id, factor) VALUES (?, ?)",
+                (doc_id, factor),
             )
             ids.append(int(cursor.lastrowid))
         connection.commit()
         return ids
 
 
-def list_action_items(note_id: Optional[int] = None) -> list[sqlite3.Row]:
+def list_test_factors(doc_id: Optional[int] = None) -> list[sqlite3.Row]:
     with get_connection() as connection:
         cursor = connection.cursor()
-        if note_id is None:
+        if doc_id is None:
             cursor.execute(
-                "SELECT id, note_id, text, done, created_at FROM action_items ORDER BY id DESC"
+                "SELECT id, doc_id, factor, covered, created_at FROM test_factors ORDER BY id DESC"
             )
         else:
             cursor.execute(
-                "SELECT id, note_id, text, done, created_at FROM action_items WHERE note_id = ? ORDER BY id DESC",
-                (note_id,),
+                "SELECT id, doc_id, factor, covered, created_at FROM test_factors WHERE doc_id = ? ORDER BY id DESC",
+                (doc_id,),
             )
         return list(cursor.fetchall())
 
 
-def mark_action_item_done(action_item_id: int, done: bool) -> None:
+def mark_test_factor_covered(factor_id: int, covered: bool) -> None:
     with get_connection() as connection:
         cursor = connection.cursor()
         cursor.execute(
-            "UPDATE action_items SET done = ? WHERE id = ?",
-            (1 if done else 0, action_item_id),
+            "UPDATE test_factors SET covered = ? WHERE id = ?",
+            (1 if covered else 0, factor_id),
         )
         connection.commit()
 
